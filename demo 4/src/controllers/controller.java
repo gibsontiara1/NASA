@@ -1,64 +1,57 @@
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 @RestController
 public class NasaController {
 
-    private static final String NASA_API_KEY = 6hKQ0cjNQiJdLhRMZkfSjb1UVlBGv7EZrOthvGE4;
+    @Value("${nasa.api.key}")
+    private String apiKey;  // Load API key from application.properties
 
     @GetMapping("/nasa/apod")
-    public ResponseEntity<String> getNasaApod(
+    public NasaApiResponse getNasaPictureOfTheDay(
             @RequestParam(required = false) String date,
             @RequestParam(required = false) String start_date,
             @RequestParam(required = false) String end_date,
             @RequestParam(required = false) Integer count,
             @RequestParam(required = false) Boolean thumbs
     ) {
-        try {
-            String apiUrl = buildApiUrl(date, start_date, end_date, count, thumbs);
-            RestTemplate restTemplate = new RestTemplate();
-            String result = restTemplate.getForObject(apiUrl, String.class);
-            return ResponseEntity.ok(result);
-        } catch (HttpClientErrorException e) {
-            // Handle HTTP client errors (4xx)
-            return ResponseEntity.status(e.getRawStatusCode())
-                    .body("Error from NASA API: " + e.getResponseBodyAsString());
-        } catch (Exception e) {
-            // Handle other exceptions
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Internal Server Error: " + e.getMessage());
-        }
-    }
-
-    private String buildApiUrl(String date, String start_date, String end_date, Integer count, Boolean thumbs) {
-        StringBuilder apiUrlBuilder = new StringBuilder("https://api.nasa.gov/planetary/apod?api_key=");
-        apiUrlBuilder.append(NASA_API_KEY);
+        // Construct NASA APOD API URL based on provided query parameters
+        String apiUrl = "https://api.nasa.gov/planetary/apod?api_key=" + apiKey;
 
         if (date != null) {
-            apiUrlBuilder.append("&date=").append(date);
+            apiUrl += "&date=" + date;
         }
 
         if (start_date != null) {
-            apiUrlBuilder.append("&start_date=").append(start_date);
+            apiUrl += "&start_date=" + start_date;
         }
 
         if (end_date != null) {
-            apiUrlBuilder.append("&end_date=").append(end_date);
+            apiUrl += "&end_date=" + end_date;
         }
 
         if (count != null) {
-            apiUrlBuilder.append("&count=").append(count);
+            apiUrl += "&count=" + count;
         }
 
         if (thumbs != null) {
-            apiUrlBuilder.append("&thumbs=").append(thumbs);
+            apiUrl += "&thumbs=" + thumbs;
         }
 
-        return apiUrlBuilder.toString();
+        try {
+            // Make a request to the NASA APOD API using RestTemplate
+            RestTemplate restTemplate = new RestTemplate();
+            NasaApiResponse response = restTemplate.getForObject(apiUrl, NasaApiResponse.class);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (HttpClientErrorException e) {
+            // Handle HTTP client errors (4xx)
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            // Handle other exceptions
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }
