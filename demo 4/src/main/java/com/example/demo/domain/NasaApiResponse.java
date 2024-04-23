@@ -1,4 +1,5 @@
-// NasaApiResponse.java
+package com.example.demo.domain;
+
 public class NasaApiResponse {
     private String date;
     private String explanation;
